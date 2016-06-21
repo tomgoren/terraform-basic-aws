@@ -43,23 +43,55 @@ resource "aws_security_group" "basic_sg1" {
 # Launch Configuration
 # Create multiple identical instances for autoscale
 resource "aws_launch_configuration" "basic_instance" {
-  name = "basic_appserver"
-  image_id = "${var.aws.ami_id}"
-  instance_type = "m3.medium"
-  security_groups = ["${aws_security_group.basic_sg1.id}"]
+    name = "basic_appserver"
+    image_id = "${var.aws.ami_id}"
+    instance_type = "m3.medium"
+    security_groups = ["${aws_security_group.basic_sg1.id}"]
 }
 
 # Autoscaling Group
 resource "aws_autoscaling_group" "basic-asg" {
-  min_size = 1
-  max_size = 3
-  launch_configuration = "${aws_launch_configuration.basic_instance.name}"
+    min_size = 1
+    max_size = 3
+    launch_configuration = "${aws_launch_configuration.basic_instance.name}"
+    availability_zones = ["${var.aws.availability_zone}"]
 }
-
 
 # S3 bucket
 # Here is where we store configuration files that will be deployed to the instance(s)
 resource "aws_s3_bucket" "basic_bucket" {
-    bucket = "terraform_basic_bucket"
+    bucket = "challenge_config"
     acl = "private"
 }
+
+
+# IAM User
+resource "aws_iam_user" "basic_user" {
+    name = "basic_user"
+}
+
+
+# # IAM permissions
+# resource "aws_iam_role" "basic_role" {
+#     name = "basic_role"
+#     assume_role_policy = <<EOF
+# {
+#   "Version": "2012-10-17",
+#   "Statement": [
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#         "s3:List*",
+#         "s3:GetObject"
+#       ],
+#       "Resource": [
+#         "arn:aws:s3:::${aws_s3_bucket.basic_bucket.bucket}/*"
+#       ],
+#       "Principal": {
+#         "Service": "s3.amazonaws.com"
+#       }
+#     }
+#   ]
+# }
+# EOF
+# }
