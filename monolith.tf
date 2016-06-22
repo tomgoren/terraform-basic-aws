@@ -54,6 +54,13 @@ resource "aws_launch_configuration" "basic_instance" {
     security_groups = ["${aws_security_group.basic_sg1.id}"]
     iam_instance_profile = "${aws_iam_instance_profile.s3_readonly.name}"
     key_name = "${aws_key_pair.ubuntu.key_name}"
+    # This causes weird issues on occasion because of an AWS bug
+    # At least according to https://github.com/hashicorp/terraform/issues/7198
+    # When it works it works
+    user_data = "${file("cloud-init.sh")}"
+    lifecycle {
+        create_before_destroy = true
+    }
 }
 
 # Autoscaling Group
@@ -64,15 +71,10 @@ resource "aws_autoscaling_group" "basic-asg" {
     availability_zones = ["${var.aws.availability_zone}"]
 }
 
-# S3 bucket
-# Here is where we store configuration files that will be deployed to the instance(s)
-resource "aws_s3_bucket" "basic_bucket" {
-    bucket = "challenge_config"
-    acl = "private"
-}
-
 # IAM permissions
 # Should allow EC2 instances to access S3 buckets
+# Unsure if this is all necessary given the public 
+# permissions given to the nginx config file
 
 # This is the part that ties the role and the policy together for the launch configuration
 resource "aws_iam_instance_profile" "s3_readonly" {
