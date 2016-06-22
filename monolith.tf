@@ -3,6 +3,9 @@
 # Create Auto-Scaling Group based on AMI built by Packer
 # Implement rudimentary network security hardening by limiting access
 #
+# This file could be broken up into multiple '.tf' files.
+# I chose not to for simplicity's sake, but anything of larger scale
+# I would use separate files, i.e.: 'security_group.tf, auto-scaling.tf, etc.'
 
 
 variable "aws" {
@@ -17,7 +20,6 @@ provider "aws" {
     secret_key = "${var.aws.secret_key}"
     region = "${var.aws.region}"
 }
-
 
 # Security Group
 resource "aws_security_group" "basic_sg1" {
@@ -69,13 +71,6 @@ resource "aws_s3_bucket" "basic_bucket" {
     acl = "private"
 }
 
-
-# IAM User
-resource "aws_iam_user" "basic_user" {
-    name = "basic_user"
-}
-
-
 # IAM permissions
 # Should allow EC2 instances to access S3 buckets
 
@@ -123,7 +118,6 @@ resource "aws_iam_role" "get_configs_role" {
 }
 EOF
 }
-
 
 # SSH key for instances
 resource "aws_key_pair" "ubuntu" {
