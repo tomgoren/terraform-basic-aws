@@ -12,7 +12,7 @@ variable "aws" {
 
 # AWS
 provider "aws" {
-    # AWS credentials and regsion specified in variables file
+    # AWS credentials and region specified in variables file
     access_key = "${var.aws.access_key}"
     secret_key = "${var.aws.secret_key}"
     region = "${var.aws.region}"
@@ -30,6 +30,8 @@ resource "aws_security_group" "basic_sg1" {
         from_port = 22
         to_port = 22
         protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+
     }
 
     ingress {
@@ -37,6 +39,7 @@ resource "aws_security_group" "basic_sg1" {
         from_port = 80
         to_port = 80
         protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
     }
 }
 
@@ -47,6 +50,8 @@ resource "aws_launch_configuration" "basic_instance" {
     image_id = "${var.aws.ami_id}"
     instance_type = "m3.medium"
     security_groups = ["${aws_security_group.basic_sg1.id}"]
+    iam_instance_profile = "${aws_iam_instance_profile.s3_readonly.name}"
+    key_name = "${aws_key_pair.ubuntu.key_name}"
 }
 
 # Autoscaling Group
@@ -71,27 +76,57 @@ resource "aws_iam_user" "basic_user" {
 }
 
 
-# # IAM permissions
-# resource "aws_iam_role" "basic_role" {
-#     name = "basic_role"
-#     assume_role_policy = <<EOF
-# {
-#   "Version": "2012-10-17",
-#   "Statement": [
-#     {
-#       "Effect": "Allow",
-#       "Action": [
-#         "s3:List*",
-#         "s3:GetObject"
-#       ],
-#       "Resource": [
-#         "arn:aws:s3:::${aws_s3_bucket.basic_bucket.bucket}/*"
-#       ],
-#       "Principal": {
-#         "Service": "s3.amazonaws.com"
-#       }
-#     }
-#   ]
-# }
-# EOF
-# }
+# IAM permissions
+# Should allow EC2 instances to access S3 buckets
+
+# This is the part that ties the role and the policy together for the launch configuration
+resource "aws_iam_instance_profile" "s3_readonly" {
+  name  = "s3-readonly"
+  roles = ["${aws_iam_role.get_configs_role.name}"]
+}
+
+resource "aws_iam_role_policy" "get_configs_policy" {
+    name = "get_configs_policy"
+    role = "${aws_iam_role.get_configs_role.id}"
+    policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:Get*",
+                "s3:List*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_role" "get_configs_role" {
+    name = "get_configs_role"
+    assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+
+# SSH key for instances
+resource "aws_key_pair" "ubuntu" {
+    key_name = "ubuntu_key"
+    public_key = "${var.aws.ssh_public_key}"
+}
