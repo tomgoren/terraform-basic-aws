@@ -73,8 +73,7 @@ resource "aws_autoscaling_group" "basic-asg" {
 
 # IAM permissions
 # Should allow EC2 instances to access S3 buckets
-# Unsure if this is all necessary given the public 
-# permissions given to the nginx config file
+# Might be redundant with S3 bucket permissions set to public
 
 # This is the part that ties the role and the policy together for the launch configuration
 resource "aws_iam_instance_profile" "s3_readonly" {
